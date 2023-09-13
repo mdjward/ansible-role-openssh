@@ -1,0 +1,33 @@
+- name: Set variables
+  set_fact:
+    ssh_client_config: "{{ item.value }}"
+    ssh_client_user: "{{ item.value.become_user | default(item.key) | default(ansible_user) }}"
+    ssh_client_authorized_keys: "{{ item.value.ssh_authorized_keys_to_import | default([]) }}"
+
+- block:
+  - name: Generate keys
+    include_tasks: keygen.yaml
+    loop: "{{ ssh_client_config.generate_keys | default([]) }}"
+    loop_control:
+      loop_var: "key"
+
+  - name: Add authorized keys
+    authorized_key:
+      user: "{{ ssh_client_user }}"
+      state: "present"
+      key: "{{ key.key | default(key) }}"
+      path: "{{ key.path | default('~/.ssh/authorized_keys') }}"
+    loop: "{{ ssh_client_authorized_keys }}"
+    loop_control:
+      loop_var: "key"
+
+  - name: Apply SSH config
+    include_role:
+      name: "andrewrothstein.ssh-config"
+    vars:
+      ssh_config_target: "{{ ssh_client_config.ssh_config_target }}"
+      ssh_config_hosts: "{{ ssh_client_config.ssh_config_hosts }}"
+    when: |
+      ssh_client_config.ssh_config_target is defined and ssh_client_config.ssh_config_hosts is defined
+  become: "{{ ssh_client_config.become | default(false) }}"
+  become_user: "{{ ssh_client_user }}"

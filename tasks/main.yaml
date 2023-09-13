@@ -1,0 +1,7 @@
+- name: Configure SSH client for each user
+  include_tasks: user.yaml
+  loop: "{{ openssh_configs | dict2items }}"
+
+- name: Configure SSHD server
+  include_role:
+    name: andrewrothstein.sshd

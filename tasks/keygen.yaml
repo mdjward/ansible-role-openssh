@@ -1,0 +1,16 @@
+- name: Generate SSH key
+  openssh_keypair:
+    path: "{{ key.path | default('~/.ssh/id_rsa') }}"
+    type: "{{ key.type | default('rsa') }}"
+    size: "{{ key.size | default(4096) }}"
+    state: "present"
+  register: generated_key
+
+- name: Upload key to GitHub
+  github_key:
+    name: "{{ key.github_key_name }}"
+    pubkey: "{{ generated_key.public_key }}"
+    state: present
+    force: "{{ key.force | default(false) }}"
+    token: "{{ key.token | default(openssh_github_token) }}"
+  when: key.github_key_name is defined
